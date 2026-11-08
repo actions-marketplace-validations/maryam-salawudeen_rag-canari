@@ -115,6 +115,13 @@ describe("against the demo assistant", () => {
 });
 
 describe("config", () => {
+  it("starts new settings files without permission, so nobody tests by accident", async () => {
+    const { readFileSync } = await import("node:fs");
+    const cli = readFileSync(new URL("../src/cli.ts", import.meta.url), "utf8");
+    expect(cli).toContain("authorized: false");
+    expect(cli).not.toMatch(/^authorized: true$/m);
+  });
+
   it("refuses to run without authorization", () => {
     expect(() => parseConfig(demoConfig(1).replace("authorized: true", ""), { HR_TOKEN: "x" })).toThrow(/authorized: true/);
   });

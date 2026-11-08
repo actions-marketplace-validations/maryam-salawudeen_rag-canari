@@ -23,8 +23,8 @@ Only test systems you own or have written permission to test.
 
 const EXAMPLE_CONFIG = `# rag-canari config. Tokens come from environment variables, written as \${NAME}.
 
-# Confirm you own this system or have written permission to test it.
-authorized: true
+# Change to true only once you own this system or have written permission to test it.
+authorized: false
 
 target:
   url: http://localhost:8787/chat

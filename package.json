@@ -7,26 +7,39 @@
     "rag-canari": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "action",
+    "action.yml"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && esbuild action/main.ts --bundle --platform=node --target=node20 --format=cjs --outfile=action/index.cjs --log-level=warning",
     "check": "node --import tsx src/cli.ts",
     "demo": "node --import tsx demo/server.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc --noEmit --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck --types node action/main.ts"
   },
   "engines": {
     "node": ">=20"
   },
   "license": "MIT",
   "dependencies": {
+    "@actions/core": "^1.11.1",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.24.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  }
+  },
+  "keywords": [
+    "rag",
+    "llm-security",
+    "ai-security",
+    "access-control",
+    "canary",
+    "github-action",
+    "security-testing"
+  ]
 }

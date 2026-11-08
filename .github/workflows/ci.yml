@@ -20,6 +20,44 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      # npx installs straight from GitHub, so the built files must match the source.
+      # npx and the Action run straight from the repository, so the built
+      # files must match the source.
       - run: npm run build
-      - run: git diff --exit-code -- dist
+      - run: git diff --exit-code -- dist action/index.cjs
+
+  # Runs the Action itself against the practice assistant: it must catch the
+  # leak in the leaky setting and pass in the safe one.
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Start the practice assistant (leaky)
+        run: |
+          nohup npm run demo -- --mode leaky --port 8787 > /tmp/demo-leaky.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8787/chat -X POST && break; sleep 1; done
+      - uses: ./
+        id: leaky
+        with:
+          config: examples/demo.yml
+          fail-on-leak: "false"
+      - name: The leak must be caught
+        run: test "${{ steps.leaky.outputs.leaked }}" = "1"
+
+      - name: Restart the practice assistant (safe)
+        run: |
+          pkill -f demo/server.ts || true
+          sleep 1
+          nohup npm run demo -- --mode safe --port 8787 > /tmp/demo-safe.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8787/chat -X POST && break; sleep 1; done
+      - uses: ./
+        id: safe
+        with:
+          config: examples/demo.yml
+      - name: Nothing must leak
+        run: test "${{ steps.safe.outputs.leaked }}" = "0"

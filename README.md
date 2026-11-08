@@ -121,7 +121,49 @@ npx github:maryam-salawudeen/rag-canari run
 
 Add `--format markdown --out report.md` to save a report you can share with your team. When you're done, remove the canary document from your assistant.
 
-**Running it automatically:** when rag-canari finishes, it tells the computer how the test went with a number called an **exit code**: `0` no leaks, `1` a leak was found, `2` the test couldn't run, `3` nothing could be tested. Tools that test code automatically after every change (**CI**, such as GitHub Actions) read that number, so a leak can stop a risky change from going live.
+**Running it from other tools:** when rag-canari finishes, it tells the computer how the test went with a number called an **exit code**: `0` no leaks, `1` a leak was found, `2` the test couldn't run, `3` nothing could be tested. Tools that test code automatically after every change (**CI**) read that number, so a leak can stop a risky change from going live. On GitHub, the Action below does this for you.
+
+## Run it automatically on GitHub
+
+rag-canari is also a GitHub Action: a ready-made tool GitHub can run for you automatically, for example every Monday morning, or each time your team updates the assistant. If a canary leaks, the check turns red and the report appears on the run's summary page. It's like a smoke alarm you test every week, instead of waiting for a fire.
+
+Two things need to be true first:
+
+- **GitHub's computers can reach your assistant.** The test runs on GitHub's computers, so your assistant (ideally a test copy) needs an address they can reach over the internet.
+- **The test logins' tokens are saved as secrets.** In your repository, go to **Settings → Secrets and variables → Actions** and add each token, for example `INTERN_TOKEN` and `HR_TOKEN`. Secrets are hidden: they never appear in logs or in the settings file.
+
+Put your `rag-canari.yml` settings file in the repository, then add `.github/workflows/rag-canari.yml`:
+
+```yaml
+name: RAG leak test
+
+on:
+  workflow_dispatch:        # adds a "Run workflow" button
+  schedule:
+    - cron: "0 13 * * 1"    # every Monday at 13:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maryam-salawudeen/rag-canari@v0
+        env:
+          INTERN_TOKEN: ${{ secrets.INTERN_TOKEN }}
+          HR_TOKEN: ${{ secrets.HR_TOKEN }}
+```
+
+| Setting | Default | What it does |
+|---|---|---|
+| `config` | `rag-canari.yml` | Where your settings file is |
+| `fail-on-leak` | `true` | Turn the check red when a canary leaks |
+| `fail-on-inconclusive` | `true` | Turn the check red when nothing could be tested, because even an allowed user couldn't find the canary |
+| `report` | `rag-canari-report.md` | Where to save the report |
+
+The Action also tells later steps how many canaries leaked (`leaked`) and couldn't be tested (`inconclusive`), if you want to send an alert.
 
 ## If it finds a leak
 
@@ -150,7 +192,7 @@ npm install
 npm test
 ```
 
-The tests start the practice assistant in each setting and check that rag-canari gets the right result every time. `npm run build` prepares the files in `dist/`, which are saved in the repository so the `npx github:…` commands work.
+The tests start the practice assistant in each setting and check that rag-canari gets the right result every time. On GitHub, CI also runs the Action itself against the practice assistant. `npm run build` prepares the files in `dist/` and `action/index.cjs`, which are saved in the repository so the `npx github:…` commands and the Action work without an install step.
 
 If you try it, tell me what it found, or a question that got a document out that rag-canari didn't try, and I'll add it.
 

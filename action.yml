@@ -1,0 +1,32 @@
+name: rag-canari
+description: Tests whether your AI assistant leaks restricted documents, by planting a canary and asking as other users.
+author: Maryam Salawudeen
+branding:
+  icon: feather
+  color: yellow
+
+inputs:
+  config:
+    description: Path to the settings file. Tokens in it, written as ${NAME}, are read from the step's env.
+    default: rag-canari.yml
+  fail-on-leak:
+    description: Fail the check when any canary leaks.
+    default: "true"
+  fail-on-inconclusive:
+    description: Fail the check when no canary could be found even by an allowed user, so nothing was tested.
+    default: "true"
+  report:
+    description: Where to save the Markdown report.
+    default: rag-canari-report.md
+
+outputs:
+  leaked:
+    description: Number of canary documents that leaked.
+  inconclusive:
+    description: Number of canary documents that couldn't be tested.
+  report:
+    description: Path to the Markdown report.
+
+runs:
+  using: node20
+  main: action/index.cjs

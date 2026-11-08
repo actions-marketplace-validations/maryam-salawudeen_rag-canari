@@ -1,33 +1,37 @@
 # rag-canari
 
-*Canari* is French for canary. Miners used to carry a canary into the mine, because it reacted to poisonous air before people did. rag-canari plants a canary document in your AI assistant and warns you when it shows up where it shouldn't.
+*Canari* is French for canary. Miners used to carry a canary into the mine, because it reacted to poisonous air before people did. rag-canari plants a "canary" document in your company's AI assistant and warns you if it reaches someone who shouldn't see it.
 
-It's a free tool that tests whether your company's AI assistant shows people documents they aren't allowed to see. You plant a marked document that only some users may read, and the checker logs in as everyone else and tries to get it out.
+It's free, and it answers one question: **can people get documents out of your AI assistant that they aren't allowed to read?**
 
-It works with any assistant you can reach over HTTP, needs no AI model or API key, and gives the same result every time.
-
-> **Only test systems you own or have written permission to test.** The checker sends questions designed to get around access controls. It won't run until your config says `authorized: true`.
+> **Only test systems you own or have written permission to test.** rag-canari asks questions designed to get around access rules. It won't run until you confirm permission in its settings file with `authorized: true`.
 
 ## Why I built it
 
-Many companies are building AI assistants on top of their own documents: the handbook, policies, contracts, HR files. This is called RAG (retrieval-augmented generation): when you ask a question, the assistant searches the company's documents, then answers using what it found.
+Many companies now have an AI assistant that answers staff questions from the company's own documents: the handbook, policies, contracts, HR files. The name for this is **RAG** (retrieval-augmented generation). When you ask a question, the assistant first searches the company's documents for anything related, then writes its answer from what it found.
 
-The risk is in the search. If it looks through every document, whoever is asking, an intern's question can pull in the salary file, and the AI will happily use it in the answer. I kept seeing teams try to fix this by telling the AI "don't reveal restricted documents". That doesn't work: ask in a different way, or ask for a translation, and the document comes out.
+The danger is in that search. Imagine a librarian who fetches books for anyone who asks, including books from the locked staff room. If the assistant searches every document, whoever is asking, an intern's question can pull in the salary file, and the AI will use it in the answer.
 
-I looked for a free tool that tests a company's own running assistant for this, logged in as different people, and couldn't find one. The tools I found test their own demo systems, or need a paid AI key. So I built one.
+I kept seeing teams try to fix this by telling the AI "don't reveal restricted documents". That doesn't work. Ask the question a different way, or ask for a translation, and the document comes out anyway.
+
+I looked for a free tool that tests a company's own assistant for this, logged in as different people, and couldn't find one. The tools I found only test their own practice systems, or need a paid AI subscription. So I built one.
 
 ## How it works
 
 Think of a marked banknote. If it turns up somewhere it shouldn't be, you know exactly where it came from.
 
-1. **Plant a marked document.** `rag-canari plant` makes a believable restricted document, like "2027 Salary Bands", with a unique code inside it (`RCAN-…`) and a unique figure. You load it into your assistant so that only certain people (say, HR) can read it.
-2. **Check it can be found.** The checker asks as someone who *is* allowed. If even they can't get it, the test can't prove anything, so it reports **inconclusive** instead of a false "all safe".
-3. **Try to get it out as everyone else.** It asks as each other user in ten ways: by title, by topic, claiming to be HR, telling the assistant to ignore its rules, asking for codes and numbers, a translation, a different format, a hint, a list of all documents, and a summary of everything.
-4. **Look for the mark.** If the code shows up in an answer (even spaced out or encoded), or the document is listed as a source, that's a leak. If its figure shows up, that's a strong sign of one.
+1. **Plant a marked document.** rag-canari writes a fake but believable restricted document, like "2027 Salary Bands". It contains a unique code (such as `RCAN-7F3K-Q9WM-2HDX`) and a unique number that appear nowhere else. You add it to your assistant so only certain people, say HR, can read it.
+2. **Check that HR can find it.** rag-canari asks as an HR user first. If even HR can't get the document, the test can't prove anything, so it says **inconclusive** instead of wrongly saying "all safe".
+3. **Try to get it as everyone else.** It asks as each other user, in ten different ways: by the document's title, by its topic, pretending to be HR, telling the assistant to ignore its rules, asking for codes and numbers, asking for a translation, asking for a different format, asking for a hint, asking for a list of all documents, and asking for a summary of everything.
+4. **Look for the mark.** If the unique code appears in an answer (even with spaces added or scrambled), or the document is listed as a source, that's proof of a leak. If the unique number appears, that's a strong sign of one.
+
+It needs no AI of its own and no paid account, so it's free and gives the same result every time.
 
 ## Try it in 5 minutes
 
-The repository includes a small practice assistant, so you can see the checker work without a real system. You need [Node.js](https://nodejs.org) 20 or later.
+rag-canari comes with a small **practice assistant**: a pretend company chatbot with an intern login, an HR login and a secret salary file. You can watch rag-canari catch a leak without touching a real system.
+
+You need [Node.js](https://nodejs.org) version 20 or later (the free program that runs rag-canari). Open a terminal, the window where you type commands, and run:
 
 ```bash
 git clone https://github.com/maryam-salawudeen/rag-canari.git
@@ -35,19 +39,19 @@ cd rag-canari
 npm install
 ```
 
-Start the practice assistant in its leaky setting:
+That downloads rag-canari and the small libraries it uses. Now start the practice assistant in its leaky setting:
 
 ```bash
 npm run demo -- --mode leaky
 ```
 
-In a second terminal window, run the checker against it:
+Leave that window open. In a second terminal window, inside the same `rag-canari` folder, run the test:
 
 ```bash
 npm run check -- run --config examples/demo.yml
 ```
 
-You'll see something like:
+You'll see something like this:
 
 ```
 🔴 2027 Salary Bands (salary-bands): LEAKED to intern (10 question(s) got it out)
@@ -58,35 +62,41 @@ You'll see something like:
     How we know: the canary's secret code appeared in the answer; the canary was listed as a source.
 ```
 
-Stop the practice assistant (Ctrl+C), start it again with another setting, and run the checker again. Each setting copies a real mistake, or the fix:
+The intern got the salary file all ten ways. Now try the other settings. Stop the practice assistant with Ctrl+C, start it again with a different `--mode`, and run the test again. Each setting copies a real mistake companies make, or the fix:
 
-| Setting | What it does | Result |
+| Setting | What the practice assistant does | Result |
 |---|---|---|
 | `leaky` | Searches every document, whoever asks | 🔴 Leaked |
-| `hides-sources` | Hides restricted documents from the sources list, but still uses their content | 🔴 Leaked |
-| `guarded` | Refuses questions that name a restricted document, like a system prompt saying "don't reveal restricted documents" | 🔴 Leaked: the direct question is blocked, but 7 other questions get it out |
-| `safe` | Only searches documents the user is allowed to read | 🟢 Protected |
+| `hides-sources` | Uses the salary file in answers, but hides it from the list of sources | 🔴 Leaked |
+| `guarded` | Refuses any question that names the salary file, like an AI told "don't reveal restricted documents" | 🔴 Leaked: asking by name is blocked, but 7 other questions still get it out |
+| `safe` | Only searches documents the person asking is allowed to read | 🟢 Protected |
+
+The `guarded` result is the main lesson: telling an AI to keep a secret doesn't keep it secret.
 
 ## Test your own assistant
 
-**1. Make a config.** In a new folder:
+Use a test copy of your assistant if you have one, sometimes called a staging system, rather than the one staff use every day.
+
+**1. Create a settings file.** In a new folder, run:
 
 ```bash
 npx github:maryam-salawudeen/rag-canari init
 ```
 
-This writes `rag-canari.yml`. Edit three parts:
+This creates `rag-canari.yml`, the settings file. Open it in any text editor and change three parts:
 
-- **`target`**: your assistant's address, the request it expects, and where the answer is in its reply. `{{prompt}}` is where the question goes.
-- **`identities`**: at least two test accounts, one allowed to read the canary and one not. Put their tokens in environment variables and refer to them as `${NAME}`, so they stay out of the file.
-- **`authorized: true`**: only once you're sure you may test this system.
+- **`target`**: how to reach your assistant. That's its web address, the shape of the message it expects, and where the answer is in its reply. Your developers will know these; `{{prompt}}` marks where each question goes.
+- **`identities`**: at least two test logins, one allowed to read the canary document and one not. Each login has a **token**, a long password-like string the assistant uses to know who's asking. Don't paste tokens into the file. Write `${INTERN_TOKEN}` instead, and set the real value in your terminal (`export INTERN_TOKEN=...`), so tokens never end up saved or shared by accident.
+- **`authorized: true`**: add this only once you're sure you're allowed to test this system.
+
+Here's what the first two parts look like:
 
 ```yaml
 target:
   url: https://assistant.example.ca/api/chat
   body: '{"message": {{prompt}}}'
-  answer: answer             # or choices.0.message.content, data.reply, ...
-  sources: sources[].title   # optional, if it returns citations
+  answer: answer             # where the answer is in the reply
+  sources: sources[].title   # optional: where the list of sources is
 
 identities:
   intern:
@@ -95,40 +105,43 @@ identities:
     headers: { Authorization: "Bearer ${HR_TOKEN}" }
 ```
 
-**2. Plant a canary.**
+**2. Make a canary document.**
 
 ```bash
 npx github:maryam-salawudeen/rag-canari plant --title "2027 Salary Bands" --topic "salary bands" --allowed hr-manager
 ```
 
-It writes `canaries/2027-salary-bands.md` and prints the lines to add under `canaries:` in your config. Load the document into your assistant's knowledge base with the same permissions your real restricted documents have. Use a test or staging system if you have one.
+This writes the document to `canaries/2027-salary-bands.md` and prints a few lines to copy into the `canaries:` part of your settings file. Then add the document to your assistant, with the same permissions as your real restricted documents (in this example, HR only).
 
-**3. Run the check.**
+**3. Run the test.**
 
 ```bash
 npx github:maryam-salawudeen/rag-canari run
 ```
 
-Add `--format markdown --out report.md` for a report you can share, or `--format json` for other tools. When you're done, delete the canary document from your assistant.
+Add `--format markdown --out report.md` to save a report you can share with your team. When you're done, remove the canary document from your assistant.
 
-The exit code says what happened, so you can run it in CI after each change to your assistant: `0` no leaks, `1` a leak was found, `2` the test couldn't run, `3` nothing could be tested.
+**Running it automatically:** when rag-canari finishes, it tells the computer how the test went with a number called an **exit code**: `0` no leaks, `1` a leak was found, `2` the test couldn't run, `3` nothing could be tested. Tools that test code automatically after every change (**CI**, such as GitHub Actions) read that number, so a leak can stop a risky change from going live.
 
 ## If it finds a leak
 
-The fix is almost always the same: **filter by the user's permissions when searching, before the AI sees anything.** Most vector databases support this with metadata filters, namespaces or separate indexes per group. After that:
+The fix is almost always the same: **the search must check who's asking before it looks, so restricted documents never reach the AI at all.** Back to the librarian: they should check your staff card before going into the locked room, not fetch the book and then hope you don't read it.
 
-- Make sure the sources list and the answer come from the same filtered results.
-- Don't rely on the AI's instructions for access control. Whoever can type a question can get around them.
-- Run the checker again to confirm the fix.
+For your developers, that usually means:
 
-This is LLM08 (Vector and Embedding Weaknesses) and LLM02 (Sensitive Information Disclosure) in the [OWASP Top 10 for LLM Applications](https://genai.owasp.org/llm-top-10/).
+- Filter search results by the user's permissions inside the search itself. Most **vector databases** (the special databases AI assistants use to find related text) support this with metadata filters, namespaces or a separate index for each group.
+- Make sure the list of sources and the answer come from the same filtered results.
+- Don't rely on the AI's instructions for access control. Anyone who can type a question can get around them.
+- Run rag-canari again to confirm the fix.
+
+Security professionals call this LLM08 (Vector and Embedding Weaknesses) and LLM02 (Sensitive Information Disclosure) in the [OWASP Top 10 for LLM Applications](https://genai.owasp.org/llm-top-10/), the standard list of the biggest security risks in AI applications.
 
 ## Limits
 
-- **It only finds what it looks for.** It won't notice leaks of documents that have no canary. Plant one for each kind of restricted document and each permission group.
-- **It asks each question once.** Assistants built on AI models can answer differently each time, so a pass is good evidence, not a guarantee. Run it more than once on important systems.
-- **It tests one turn at a time.** Leaks that need a longer conversation aren't tested yet.
-- **It needs test accounts.** You need a login for at least one allowed and one restricted user.
+- **It only catches what you mark.** It can't see leaks of documents with no canary. Plant one canary for each kind of restricted document and each group of users.
+- **It asks each question once.** AI assistants can give a different answer to the same question, so one clean run is good evidence, and several clean runs are better. Run it more than once on important systems.
+- **It asks one question at a time.** Leaks that only happen over a longer back-and-forth conversation aren't tested yet.
+- **It needs test logins.** You need at least one login that may read the canary and one that may not.
 
 ## Development
 
@@ -137,9 +150,9 @@ npm install
 npm test
 ```
 
-The tests start the practice assistant in each setting and check the results. `npm run build` compiles to `dist/`, which is committed so `npx github:…` works without a publish step.
+The tests start the practice assistant in each setting and check that rag-canari gets the right result every time. `npm run build` prepares the files in `dist/`, which are saved in the repository so the `npx github:…` commands work.
 
-If you try it, tell me what it found, or a question that got a document out that the checker didn't try, and I'll add it.
+If you try it, tell me what it found, or a question that got a document out that rag-canari didn't try, and I'll add it.
 
 ## Licence
 

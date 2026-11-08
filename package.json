@@ -1,0 +1,32 @@
+{
+  "name": "rag-canari",
+  "version": "0.1.0",
+  "description": "Tests whether your AI assistant leaks documents people aren't allowed to see, by planting marked documents and trying to pull them out as other users.",
+  "type": "module",
+  "bin": {
+    "rag-canari": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "node --import tsx src/cli.ts",
+    "demo": "node --import tsx demo/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
